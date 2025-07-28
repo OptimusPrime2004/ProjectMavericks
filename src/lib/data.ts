@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { FileCheck, Users, Mail, CheckCircle2, List, Send } from 'lucide-react';
+import { FileCheck, Users, Mail, CheckCircle2, List, Send, User, FileText as FileTextIcon } from 'lucide-react';
 
 export interface WorkflowStep {
   name: string;
@@ -44,6 +44,7 @@ export interface JobDescription {
   skills: string[];
   experience: string;
   status: 'Open' | 'Closed' | 'Interviewing';
+  name?: string; // name is title
 }
 
 export const recruiterJds: JobDescription[] = [
@@ -52,11 +53,12 @@ export const recruiterJds: JobDescription[] = [
   { id: 'JD003', title: 'UX/UI Designer', skills: ['Figma', 'User Research', 'Prototyping'], experience: '3+ Years', status: 'Open' },
   { id: 'JD004', title: 'Data Scientist', skills: ['Python', 'TensorFlow', 'SQL'], experience: '4+ Years', status: 'Closed' },
   { id: 'JD005', title: 'Project Manager', skills: ['Agile', 'Scrum', 'JIRA'], experience: '6+ Years', status: 'Open' },
-];
+].map(jd => ({...jd, name: jd.title}));
 
 export interface ConsultantProfile {
   id: string;
   name: string;
+  title?: string; // title is name
 }
 
 export const consultantProfiles: ConsultantProfile[] = [
@@ -65,4 +67,4 @@ export const consultantProfiles: ConsultantProfile[] = [
     { id: 'CP03', name: 'Aisha Khan' },
     { id: 'CP04', name: 'Ben Carter' },
     { id: 'CP05', name: 'Olivia Martinez' },
-]
+].map(p => ({...p, title: p.name}));

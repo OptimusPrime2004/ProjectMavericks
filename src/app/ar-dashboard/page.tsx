@@ -1,13 +1,24 @@
+
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
-import { arDashboardData } from "@/lib/data";
-import { FileCheck, Users, Mail, ArrowRight, CheckCircle2 } from "lucide-react";
+import { arDashboardData, recruiterJds, consultantProfiles } from "@/lib/data";
+import { FileCheck, Users, Mail, ArrowRight, CheckCircle2, User, FileText } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import WorkflowProgress from "@/components/WorkflowProgress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 export default function ARDashboardPage() {
+  const [view, setView] = useState<'profiles' | 'jds'>('profiles');
+  const [selectedItem, setSelectedItem] = useState('');
+
   const { jdComparisonStatus, topMatchesStatus, emailNotificationStatus, topMatches } = arDashboardData;
 
   const statusIcons = {
@@ -17,7 +28,7 @@ export default function ARDashboardPage() {
   };
 
   const getBadgeVariant = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'Completed':
       case 'Listed':
       case 'Sent':
@@ -30,10 +41,55 @@ export default function ARDashboardPage() {
     }
   }
 
+  const handleViewChange = (value: 'profiles' | 'jds') => {
+    setView(value);
+    setSelectedItem('');
+  };
+  
+  const dropdownOptions = view === 'profiles' ? consultantProfiles : recruiterJds;
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dashboard View</CardTitle>
+            <CardDescription>Select a profile or job description to see the matching details.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col md:flex-row gap-6 items-center">
+             <RadioGroup value={view} onValueChange={handleViewChange} className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="profiles" id="r1" />
+                  <Label htmlFor="r1" className="flex items-center gap-2 cursor-pointer">
+                    <User className="h-4 w-4"/>
+                    Profiles
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="jds" id="r2" />
+                  <Label htmlFor="r2" className="flex items-center gap-2 cursor-pointer">
+                    <FileText className="h-4 w-4" />
+                    Job Descriptions
+                  </Label>
+                </div>
+              </RadioGroup>
+
+            <Select value={selectedItem} onValueChange={setSelectedItem}>
+              <SelectTrigger className="w-full md:w-[300px]">
+                <SelectValue placeholder={`Select a ${view === 'profiles' ? 'profile' : 'JD'}...`} />
+              </SelectTrigger>
+              <SelectContent>
+                {dropdownOptions.map(option => (
+                  <SelectItem key={option.id} value={option.id}>
+                     {view === 'profiles' ? option.name : (option as typeof recruiterJds[0]).title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
