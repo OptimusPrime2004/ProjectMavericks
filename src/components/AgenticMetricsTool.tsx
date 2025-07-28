@@ -6,20 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles } from 'lucide-react';
-import { getAgenticMetricsInsights, type AgenticMetricsInsightsInput } from '@/ai/flows/agentic-metrics-insights';
 import { useToast } from '@/hooks/use-toast';
-
-async function handleGetInsights(input: AgenticMetricsInsightsInput) {
-  'use server';
-  try {
-    const result = await getAgenticMetricsInsights(input);
-    return { success: true, insights: result.insights };
-  } catch (error) {
-    console.error(error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return { success: false, error: `Failed to get insights: ${errorMessage}` };
-  }
-}
+import { handleGetInsights } from '@/app/actions';
 
 export default function AgenticMetricsTool() {
   const [isPending, startTransition] = useTransition();
