@@ -1,18 +1,78 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
-import { arDashboardData, recruiterJds, consultantProfiles } from "@/lib/data";
-import { FileCheck, Users, Mail, ArrowRight, CheckCircle2, User, FileText } from "lucide-react";
+import { arDashboardData, recruiterJds, consultantProfiles, type JobDescription, type ConsultantProfile } from "@/lib/data";
+import { FileCheck, Users, Mail, ArrowRight, User, FileText, Briefcase, Star, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import WorkflowProgress from "@/components/WorkflowProgress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+
+function DetailsCard({ item, type }: { item: JobDescription | ConsultantProfile | null; type: 'jds' | 'profiles' }) {
+  if (!item) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Details</CardTitle>
+          <CardDescription>Select an item from the dropdown to see its details.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">No item selected.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const isJd = type === 'jds';
+  const jd = isJd ? item as JobDescription : null;
+  const profile = !isJd ? item as ConsultantProfile : null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{isJd ? jd?.title : profile?.name}</CardTitle>
+        <CardDescription>{isJd ? `Details for Job Description ID: ${jd?.id}` : `Details for Profile ID: ${profile?.id}`}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {profile && (
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-muted-foreground" />
+            <span className="font-medium">{profile.title}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-muted-foreground" />
+          <span className="font-medium">{item.experience}</span>
+        </div>
+         {jd && (
+          <div className="flex items-center gap-2">
+             <Badge variant={jd.status === 'Open' ? 'default' : jd.status === 'Interviewing' ? 'secondary' : 'outline'} className="capitalize">
+              {jd.status}
+            </Badge>
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-semibold">Skills</h3>
+            </div>
+            <div className="flex flex-wrap gap-2 pl-7">
+            {item.skills.map(skill => (
+                <Badge key={skill} variant="secondary">{skill}</Badge>
+            ))}
+            </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 
 export default function ARDashboardPage() {
@@ -48,6 +108,11 @@ export default function ARDashboardPage() {
   
   const dropdownOptions = view === 'profiles' ? consultantProfiles : recruiterJds;
 
+  const selectedObject = useMemo(() => {
+    if (!selectedItem) return null;
+    return dropdownOptions.find(option => option.id === selectedItem) || null;
+  }, [selectedItem, dropdownOptions]);
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
@@ -82,13 +147,17 @@ export default function ARDashboardPage() {
               <SelectContent>
                 {dropdownOptions.map(option => (
                   <SelectItem key={option.id} value={option.id}>
-                     {view === 'profiles' ? option.name : (option as typeof recruiterJds[0]).title}
+                     {view === 'profiles' ? option.name : (option as JobDescription).title}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </CardContent>
         </Card>
+
+        {selectedObject && (
+          <DetailsCard item={selectedObject} type={view} />
+        )}
 
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
           <Card>

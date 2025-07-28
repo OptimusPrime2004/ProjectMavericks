@@ -58,13 +58,15 @@ export const recruiterJds: JobDescription[] = [
 export interface ConsultantProfile {
   id: string;
   name: string;
-  title?: string; // title is name
+  title: string;
+  skills: string[];
+  experience: string;
 }
 
 export const consultantProfiles: ConsultantProfile[] = [
-    { id: 'CP01', name: 'Elena Rodriguez' },
-    { id: 'CP02', name: 'Marcus Chen' },
-    { id: 'CP03', name: 'Aisha Khan' },
-    { id: 'CP04', name: 'Ben Carter' },
-    { id: 'CP05', name: 'Olivia Martinez' },
-].map(p => ({...p, title: p.name}));
+    { id: 'CP01', name: 'Elena Rodriguez', title: 'Senior Frontend Developer', skills: ['React', 'TypeScript', 'Next.js', 'Node.js'], experience: '7 Years' },
+    { id: 'CP02', name: 'Marcus Chen', title: 'Cloud Solutions Architect', skills: ['AWS', 'Azure', 'GCP', 'Terraform'], experience: '9 Years' },
+    { id: 'CP03', name: 'Aisha Khan', title: 'UX/UI Designer', skills: ['Figma', 'Sketch', 'Adobe XD', 'User Research'], experience: '4 Years' },
+    { id: 'CP04', name: 'Ben Carter', title: 'Data Scientist', skills: ['Python', 'R', 'PyTorch', 'SQL'], experience: '5 Years' },
+    { id: 'CP05', name: 'Olivia Martinez', title: 'Project Manager', skills: ['Agile', 'Scrum', 'Kanban', 'JIRA'], experience: '8 Years' },
+];
