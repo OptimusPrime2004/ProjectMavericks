@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
@@ -12,43 +12,42 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { handleCompareProfiles, type MatchResult } from "@/app/actions";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 
-// Mockup of how files might be stored after upload.
-// In a real app, this would come from a state management library or server.
-const MOCK_FILES = {
-  jds: [
-    { name: 'Senior_Frontend_Dev.txt', content: 'Job Description for a Senior Frontend Developer...' },
-    { name: 'Cloud_Architect.txt', content: 'Job Description for a Cloud Solutions Architect...' },
-  ],
-  profiles: [
-    { name: 'Elena_Rodriguez.txt', content: 'Profile for Elena Rodriguez...' },
-    { name: 'Marcus_Chen.txt', content: 'Profile for Marcus Chen...' },
-    { name: 'Aisha_Khan.txt', content: 'Profile for Aisha Khan...' },
-  ],
-};
-
+interface UploadedFile {
+  name: string;
+  content: string;
+}
 
 export default function ComparePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  
-  // NOTE: This component is currently using mock data for uploaded files.
-  // The upload page does not yet persist files for this page to use.
-  const [jobDescriptionFiles, setJobDescriptionFiles] = useState(MOCK_FILES.jds);
-  const [profileFiles, setProfileFiles] = useState(MOCK_FILES.profiles);
+
+  const [jobDescriptionFiles, setJobDescriptionFiles] = useState<UploadedFile[]>([]);
+  const [profileFiles, setProfileFiles] = useState<UploadedFile[]>([]);
 
   const [selectedJdForComparison, setSelectedJdForComparison] = useState<string>('');
   const [selectedProfilesForComparison, setSelectedProfilesForComparison] = useState<Record<string, boolean>>({});
 
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
-  
-  const handleFileRead = async (fileName: string, type: 'jds' | 'profiles'): Promise<string> => {
-    const file = MOCK_FILES[type].find(f => f.name === fileName);
-    if (!file) throw new Error("File not found");
-    return file.content;
-  };
 
+  useEffect(() => {
+    try {
+      const storedJds = localStorage.getItem("jds");
+      if (storedJds) {
+        setJobDescriptionFiles(JSON.parse(storedJds));
+      }
+      const storedProfiles = localStorage.getItem("profiles");
+      if (storedProfiles) {
+        setProfileFiles(JSON.parse(storedProfiles));
+      }
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Could not load files",
+            description: "There was an error reading files from local storage."
+        })
+    }
+  }, [toast]);
 
   const handleProfileSelectionChange = (fileName: string) => {
     setSelectedProfilesForComparison(prev => ({
@@ -59,8 +58,9 @@ export default function ComparePage() {
   
   const handleCompare = () => {
     const selectedProfileNames = Object.keys(selectedProfilesForComparison).filter(name => selectedProfilesForComparison[name]);
+    const selectedJd = jobDescriptionFiles.find(jd => jd.name === selectedJdForComparison);
 
-    if (!selectedJdForComparison || selectedProfileNames.length === 0) {
+    if (!selectedJd || selectedProfileNames.length === 0) {
       toast({
         variant: "destructive",
         title: "Missing Selections",
@@ -71,17 +71,11 @@ export default function ComparePage() {
 
     startTransition(async () => {
       try {
-        const jdContent = await handleFileRead(selectedJdForComparison, 'jds');
-        const profilesContent = await Promise.all(
-            selectedProfileNames.map(async (name) => ({
-                name: name,
-                content: await handleFileRead(name, 'profiles'),
-            }))
-        );
+        const profilesToCompare = profileFiles.filter(p => selectedProfileNames.includes(p.name));
 
         const result = await handleCompareProfiles({
-          jobDescription: jdContent,
-          profiles: profilesContent,
+          jobDescription: selectedJd.content,
+          profiles: profilesToCompare,
         });
 
         if (result.success && result.matches) {
@@ -97,8 +91,8 @@ export default function ComparePage() {
       } catch (e) {
          toast({
           variant: "destructive",
-          title: "Error Reading Files",
-          description: `Could not read the selected files. ${e instanceof Error ? e.message : ''}`,
+          title: "Error during comparison",
+          description: `An unexpected error occurred. ${e instanceof Error ? e.message : ''}`,
         });
         setMatchResults(null);
       }
@@ -111,10 +105,6 @@ export default function ComparePage() {
     <div className="flex min-h-screen w-full flex-col">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md" role="alert">
-          <p className="font-bold">Developer Note</p>
-          <p>This page uses mock data for the uploaded files list. The upload functionality on the previous page is for demonstration purposes and does not persist files.</p>
-        </div>
         <Card>
           <CardHeader>
             <CardTitle>Run Comparison</CardTitle>
