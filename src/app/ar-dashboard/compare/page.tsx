@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { handleCompareProfiles, handleSendNotification, type MatchResult } from "@/app/actions";
+// import { handleCompareProfiles, handleSendNotification, type MatchResult } from "@/app/actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -86,21 +86,21 @@ export default function ComparePage() {
       try {
         const profilesToCompare = profileFiles.filter(p => selectedProfileNames.includes(p.name));
 
-        const result = await handleCompareProfiles({
-          jobDescription: selectedJd.content,
-          profiles: profilesToCompare,
-        });
+        // const result = await handleCompareProfiles({
+        //   jobDescription: selectedJd.content,
+        //   profiles: profilesToCompare,
+        // });
 
-        if (result.success && result.matches) {
-          setMatchResults(result.matches);
-        } else {
-           toast({
-            variant: "destructive",
-            title: "Comparison Failed",
-            description: result.error || "An unknown error occurred.",
-          });
+        // if (result.success && result.matches) {
+        //   setMatchResults(result.matches);
+        // } else {
+        //    toast({
+        //     variant: "destructive",
+        //     title: "Comparison Failed",
+        //     description: result.error || "An unknown error occurred.",
+        //   });
           setMatchResults(null);
-        }
+        // }
       } catch (e) {
          toast({
           variant: "destructive",
@@ -116,21 +116,21 @@ export default function ComparePage() {
     if (!matchResults || !selectedJdForComparison) return;
 
     startNotifying(async () => {
-        const result = await handleSendNotification({
-            jobDescriptionName: selectedJdForComparison,
-            matches: matchResults,
-        });
+        // const result = await handleSendNotification({
+        //     jobDescriptionName: selectedJdForComparison,
+        //     matches: matchResults,
+        // });
 
-        if (result.success && result.email) {
-            setGeneratedEmail(result.email);
-            setIsNotifyDialogOpen(true);
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Notification Failed",
-                description: result.error || "Could not generate notification.",
-            });
-        }
+        // if (result.success && result.email) {
+        //     setGeneratedEmail(result.email);
+        //     setIsNotifyDialogOpen(true);
+        // } else {
+        //     toast({
+        //         variant: "destructive",
+        //         title: "Notification Failed",
+        //         description: result.error || "Could not generate notification.",
+        //     });
+        // }
     });
   };
 

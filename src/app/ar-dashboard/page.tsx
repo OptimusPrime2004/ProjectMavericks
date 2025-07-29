@@ -1,69 +1,88 @@
+"use client";
+import { useState } from "react";
+import { Card } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import Header from "../../components/Header";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Header from "@/components/Header";
-import Link from "next/link";
-import { ArrowRight, Upload, Wand2, FileText } from "lucide-react";
+export default function ARDashboard() {
+  const [jdFile, setJdFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [topResumes, setTopResumes] = useState<any[]>([]); // Placeholder for resume data
 
-export default function ARDashboardPage() {
-  const features = [
-    {
-      href: "/ar-dashboard/upload",
-      icon: <Upload className="h-6 w-6 text-primary" />,
-      title: "Upload Documents",
-      description: "Upload Job Descriptions and Consultant Profiles to prepare them for comparison.",
-      cta: "Go to Upload",
-    },
-    {
-      href: "/ar-dashboard/compare",
-      icon: <Wand2 className="h-6 w-6 text-primary" />,
-      title: "Compare Profiles",
-      description: "Choose uploaded documents and run the AI-powered comparison workflow.",
-      cta: "Go to Compare",
-    },
-    {
-      href: "/ar-dashboard/view",
-      icon: <FileText className="h-6 w-6 text-primary" />,
-      title: "View Documents",
-      description: "Browse the details of existing Job Descriptions and Consultant Profiles.",
-      cta: "Go to View",
-    },
-  ];
+  const handleJDChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setJdFile(e.target.files[0]);
+    }
+  };
+
+  const handleJDSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setUploading(true);
+    if (!jdFile) return;
+    try {
+      // Read file as text
+      const text = await jdFile.text();
+      // Upload JD
+      const jdRes = await fetch("/api/upload-jd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: jdFile.name, content: text }),
+      });
+      if (!jdRes.ok) throw new Error("Failed to upload JD");
+      // Fetch all resumes
+      const resumesRes = await fetch("/api/upload-resume");
+      const resumesData = await resumesRes.json();
+      const resumes = resumesData.resumes || [];
+      // Match resumes
+      const matchRes = await fetch("/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jd: { name: jdFile.name, content: text }, resumes }),
+      });
+      if (!matchRes.ok) throw new Error("Failed to match resumes");
+      const matchData = await matchRes.json();
+      setTopResumes(matchData.matches || []);
+    } catch (err) {
+      setTopResumes([]);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <>
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="flex items-center">
-          <h1 className="font-semibold text-lg md:text-2xl font-headline">AR Requestor Dashboard</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Select a function below to get started.
-        </p>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <Link key={feature.href} href={feature.href} className="flex">
-              <Card className="w-full hover:bg-card/80 transition-colors flex flex-col">
-                <CardHeader className="flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/10 p-3 rounded-full">
-                      {feature.icon}
-                    </div>
-                    <CardTitle className="font-headline text-xl">{feature.title}</CardTitle>
-                  </div>
-                  <CardDescription className="pt-2 text-left">
-                    {feature.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm font-semibold text-primary flex items-center">
-                    {feature.cta} <ArrowRight className="ml-2 h-4 w-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </main>
-    </div>
+      <div className="p-8 max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6">AR Requestor Dashboard</h1>
+        <Card className="mb-8 p-6">
+          <h2 className="text-xl font-semibold mb-4">Upload Job Description</h2>
+          <form onSubmit={handleJDSubmit} className="flex flex-col gap-4">
+            <div>
+              <Label htmlFor="jd-upload">Job Description File</Label>
+              <Input id="jd-upload" type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleJDChange} />
+            </div>
+            <Button type="submit" disabled={uploading || !jdFile}>
+              {uploading ? "Uploading..." : "Upload & Match Resumes"}
+            </Button>
+          </form>
+        </Card>
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Top 3 Matching Resumes</h2>
+          {topResumes.length === 0 ? (
+            <div className="text-gray-500">No results yet. Upload a JD to see matches.</div>
+          ) : (
+            <ol className="list-decimal pl-6">
+              {topResumes.map((resume, idx) => (
+                <li key={idx} className="mb-2">
+                  <span className="font-medium">{resume.name}</span> — <span className="text-green-600 font-semibold">Score: {resume.score}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+      </div>
+    </>
   );
 }
