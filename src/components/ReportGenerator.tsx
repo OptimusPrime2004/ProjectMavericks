@@ -1,19 +1,44 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
-import { recruiterJds, consultantProfiles } from "@/lib/data";
+import { useToast } from '@/hooks/use-toast';
+
+interface UploadedFile {
+    name: string;
+    content: string;
+}
 
 export default function ReportGenerator() {
-  const [reportType, setReportType] = useState<'jd' | 'consultant'>('jd');
+  const [reportType, setReportType] = useState<'jds' | 'profiles'>('jds');
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [generatedReport, setGeneratedReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [jds, setJds] = useState<UploadedFile[]>([]);
+  const [profiles, setProfiles] = useState<UploadedFile[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+        const storedJds = localStorage.getItem("jds");
+        if (storedJds) setJds(JSON.parse(storedJds));
+
+        const storedProfiles = localStorage.getItem("profiles");
+        if (storedProfiles) setProfiles(JSON.parse(storedProfiles));
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Could not load files",
+            description: "There was an error reading files from local storage."
+        });
+    }
+  }, [toast]);
 
   const handleGenerateReport = () => {
     if (!selectedItem) return;
@@ -22,16 +47,15 @@ export default function ReportGenerator() {
 
     // Simulate API call
     setTimeout(() => {
-      const itemName = reportType === 'jd'
-        ? recruiterJds.find(j => j.id === selectedItem)?.title
-        : consultantProfiles.find(c => c.id === selectedItem)?.name;
+      const options = reportType === 'jds' ? jds : profiles;
+      const itemName = options.find(item => item.name === selectedItem)?.name;
       
       const reportText = `
 Matching Results Report
 -------------------------
 
-Report Type: ${reportType === 'jd' ? 'By Job Description' : 'By Consultant Profile'}
-Selected Item: ${itemName} (ID: ${selectedItem})
+Report Type: ${reportType === 'jds' ? 'By Job Description' : 'By Consultant Profile'}
+Selected Item: ${itemName}
 Date: ${new Date().toLocaleDateString()}
 
 Summary:
@@ -49,7 +73,7 @@ For Consultants, it shows their match percentage across various open JDs.
     }, 1500);
   };
 
-  const options = reportType === 'jd' ? recruiterJds : consultantProfiles;
+  const options = reportType === 'jds' ? jds : profiles;
 
   return (
     <Card>
@@ -61,31 +85,31 @@ For Consultants, it shows their match percentage across various open JDs.
         <div className="grid md:grid-cols-3 gap-6 items-end">
           <div className="space-y-2">
             <Label>Report Type</Label>
-            <RadioGroup defaultValue="jd" onValueChange={(value: 'jd' | 'consultant') => {
+            <RadioGroup defaultValue="jds" onValueChange={(value: 'jds' | 'profiles') => {
               setReportType(value);
               setSelectedItem('');
               setGeneratedReport(null);
             }}>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="jd" id="r1" />
+                <RadioGroupItem value="jds" id="r1" />
                 <Label htmlFor="r1">By Job Description</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="consultant" id="r2" />
+                <RadioGroupItem value="profiles" id="r2" />
                 <Label htmlFor="r2">By Consultant Profile</Label>
               </div>
             </RadioGroup>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="select-item">Select {reportType === 'jd' ? 'Job Description' : 'Consultant'}</Label>
+            <Label htmlFor="select-item">Select {reportType === 'jds' ? 'Job Description' : 'Consultant'}</Label>
             <Select value={selectedItem} onValueChange={setSelectedItem}>
               <SelectTrigger id="select-item">
-                <SelectValue placeholder={`Select a ${reportType === 'jd' ? 'JD' : 'consultant'}...`} />
+                <SelectValue placeholder={`Select a ${reportType === 'jds' ? 'JD' : 'consultant'}...`} />
               </SelectTrigger>
               <SelectContent>
                 {options.map(option => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {reportType === 'jd' ? (option as typeof recruiterJds[0]).title : option.name}
+                  <SelectItem key={option.name} value={option.name}>
+                    {option.name}
                   </SelectItem>
                 ))}
               </SelectContent>
