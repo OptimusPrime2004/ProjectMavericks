@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import { arDashboardData, recruiterJds, consultantProfiles, type JobDescription, type ConsultantProfile } from "@/lib/data";
-import { FileCheck, Users, Mail, ArrowRight, User, FileText, Briefcase, Star, Clock, Upload, Loader2, Wand2 } from "lucide-react";
+import { FileCheck, Users, Mail, ArrowRight, User, FileText, Briefcase, Star, Clock, Upload, Loader2, Wand2, CheckSquare, Square } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import WorkflowProgress from "@/components/WorkflowProgress";
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { handleCompareProfiles, type MatchResult } from "@/app/actions";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function DetailsCard({ item, type }: { item: JobDescription | ConsultantProfile | null; type: 'jds' | 'profiles' }) {
   if (!item) {
@@ -85,10 +86,13 @@ export default function ARDashboardPage() {
   const [view, setView] = useState<'profiles' | 'jds'>('profiles');
   const [selectedItem, setSelectedItem] = useState('');
   
-  const [jobDescriptionFile, setJobDescriptionFile] = useState<File | null>(null);
+  const [jobDescriptionFiles, setJobDescriptionFiles] = useState<File[]>([]);
   const [profileFiles, setProfileFiles] = useState<File[]>([]);
-  const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
+  
+  const [selectedJdForComparison, setSelectedJdForComparison] = useState<string>('');
+  const [selectedProfilesForComparison, setSelectedProfilesForComparison] = useState<Record<string, boolean>>({});
 
+  const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
 
   const { jdComparisonStatus, topMatchesStatus, emailNotificationStatus, topMatches } = arDashboardData;
 
@@ -133,21 +137,31 @@ export default function ARDashboardPage() {
     });
   }
 
+  const handleProfileSelectionChange = (fileName: string) => {
+    setSelectedProfilesForComparison(prev => ({
+      ...prev,
+      [fileName]: !prev[fileName],
+    }));
+  };
+  
   const handleCompare = () => {
-    if (!jobDescriptionFile || profileFiles.length === 0) {
+    const jdFile = jobDescriptionFiles.find(f => f.name === selectedJdForComparison);
+    const selectedProfileFiles = profileFiles.filter(f => selectedProfilesForComparison[f.name]);
+
+    if (!jdFile || selectedProfileFiles.length === 0) {
       toast({
         variant: "destructive",
-        title: "Missing Files",
-        description: "Please upload a Job Description and at least one Profile.",
+        title: "Missing Selections",
+        description: "Please select a Job Description and at least one Profile to compare.",
       });
       return;
     }
 
     startTransition(async () => {
       try {
-        const jdContent = await handleFileRead(jobDescriptionFile);
+        const jdContent = await handleFileRead(jdFile);
         const profilesContent = await Promise.all(
-            profileFiles.map(async (file) => ({
+            selectedProfileFiles.map(async (file) => ({
                 name: file.name,
                 content: await handleFileRead(file),
             }))
@@ -172,12 +186,15 @@ export default function ARDashboardPage() {
          toast({
           variant: "destructive",
           title: "Error Reading Files",
-          description: "Could not read the uploaded files.",
+          description: "Could not read the selected files.",
         });
         setMatchResults(null);
       }
     });
   };
+
+  const selectedProfilesCount = Object.values(selectedProfilesForComparison).filter(Boolean).length;
+
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -185,20 +202,27 @@ export default function ARDashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
          <Card>
           <CardHeader>
-            <CardTitle>JD & Profile Matching</CardTitle>
-            <CardDescription>Upload a Job Description and one or more profiles to run the AI comparison agent.</CardDescription>
+            <CardTitle>Upload Documents</CardTitle>
+            <CardDescription>Upload Job Descriptions and consultant profiles to prepare them for comparison.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="jd-upload" className="flex items-center gap-2"><FileText className="h-4 w-4" /> Job Description</Label>
-                <Input id="jd-upload" type="file" accept=".txt,.md,.pdf" onChange={(e) => setJobDescriptionFile(e.target.files?.[0] || null)} />
-                 {jobDescriptionFile && <p className="text-sm text-muted-foreground">Uploaded: {jobDescriptionFile.name}</p>}
+                <Label htmlFor="jd-upload" className="flex items-center gap-2"><FileText className="h-4 w-4" /> Job Descriptions</Label>
+                <Input id="jd-upload" type="file" multiple accept=".txt,.md" onChange={(e) => setJobDescriptionFiles(Array.from(e.target.files || []))} />
+                 {jobDescriptionFiles.length > 0 && 
+                  <div className="text-sm text-muted-foreground pt-2">
+                      <p>Uploaded {jobDescriptionFiles.length} JDs:</p>
+                      <ul className="list-disc pl-5">
+                          {jobDescriptionFiles.map(f => <li key={f.name}>{f.name}</li>)}
+                      </ul>
+                  </div>
+                 }
               </div>
               <div className="space-y-2">
                  <Label htmlFor="profiles-upload" className="flex items-center gap-2"><Users className="h-4 w-4" /> Consultant Profiles</Label>
-                <Input id="profiles-upload" type="file" multiple accept=".txt,.md,.pdf" onChange={(e) => setProfileFiles(Array.from(e.target.files || []))} />
-                 {profileFiles.length > 0 && <div className="text-sm text-muted-foreground">
+                <Input id="profiles-upload" type="file" multiple accept=".txt,.md" onChange={(e) => setProfileFiles(Array.from(e.target.files || []))} />
+                 {profileFiles.length > 0 && <div className="text-sm text-muted-foreground pt-2">
                     <p>Uploaded {profileFiles.length} profiles:</p>
                     <ul className="list-disc pl-5">
                         {profileFiles.map(f => <li key={f.name}>{f.name}</li>)}
@@ -206,7 +230,51 @@ export default function ARDashboardPage() {
                  </div>}
               </div>
             </div>
-            <Button onClick={handleCompare} disabled={isPending || !jobDescriptionFile || profileFiles.length === 0}>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Run Comparison</CardTitle>
+            <CardDescription>Choose one JD and one or more profiles, then run the AI comparison workflow.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Select Job Description</Label>
+                <Select value={selectedJdForComparison} onValueChange={setSelectedJdForComparison} disabled={jobDescriptionFiles.length === 0}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a JD..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobDescriptionFiles.map(file => (
+                      <SelectItem key={file.name} value={file.name}>
+                        {file.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Select Consultant Profiles</Label>
+                <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
+                  {profileFiles.length > 0 ? profileFiles.map(file => (
+                    <div key={file.name} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={file.name} 
+                        checked={!!selectedProfilesForComparison[file.name]}
+                        onCheckedChange={() => handleProfileSelectionChange(file.name)}
+                      />
+                      <Label htmlFor={file.name} className="font-normal cursor-pointer">{file.name}</Label>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-muted-foreground">Upload profiles to see them here.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={handleCompare} disabled={isPending || !selectedJdForComparison || selectedProfilesCount === 0}>
                {isPending ? (
                 <>
                   <Loader2 className="mr-2 animate-spin" />
