@@ -12,6 +12,11 @@ import {
     type MatchResult,
 } from '@/ai/flows/compare-profiles-flow';
 
+import {
+    sendNotification,
+    type SendNotificationInput
+} from '@/ai/flows/send-notification-flow';
+
 export async function handleGetInsights(input: AgenticMetricsInsightsInput) {
   try {
     const result = await getAgenticMetricsInsights(input);
@@ -36,5 +41,18 @@ export async function handleCompareProfiles(input: CompareProfilesInput) {
     const errorMessage =
       error instanceof Error ? error.message : 'An unknown error occurred.';
     return { success: false, error: `Failed to compare profiles: ${errorMessage}` };
+  }
+}
+
+
+export async function handleSendNotification(input: SendNotificationInput) {
+  try {
+    const result = await sendNotification(input);
+    return { success: true, email: result };
+  } catch (error) {
+    console.error(error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unknown error occurred.';
+    return { success: false, error: `Failed to generate notification: ${errorMessage}` };
   }
 }

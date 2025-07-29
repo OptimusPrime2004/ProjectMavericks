@@ -5,21 +5,28 @@ import { useState, useTransition, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
-import { Loader2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, Send } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { handleCompareProfiles, type MatchResult } from "@/app/actions";
+import { handleCompareProfiles, handleSendNotification, type MatchResult } from "@/app/actions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface UploadedFile {
   name: string;
   content: string;
 }
 
+interface GeneratedEmail {
+  emailSubject: string;
+  emailBody: string;
+}
+
 export default function ComparePage() {
-  const [isPending, startTransition] = useTransition();
+  const [isComparing, startComparing] = useTransition();
+  const [isNotifying, startNotifying] = useTransition();
   const { toast } = useToast();
 
   const [jobDescriptionFiles, setJobDescriptionFiles] = useState<UploadedFile[]>([]);
@@ -29,6 +36,9 @@ export default function ComparePage() {
   const [selectedProfilesForComparison, setSelectedProfilesForComparison] = useState<Record<string, boolean>>({});
 
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
+  const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
+  const [isNotifyDialogOpen, setIsNotifyDialogOpen] = useState(false);
+
 
   useEffect(() => {
     try {
@@ -69,7 +79,10 @@ export default function ComparePage() {
       return;
     }
 
-    startTransition(async () => {
+    setMatchResults(null);
+    setGeneratedEmail(null);
+
+    startComparing(async () => {
       try {
         const profilesToCompare = profileFiles.filter(p => selectedProfileNames.includes(p.name));
 
@@ -96,6 +109,28 @@ export default function ComparePage() {
         });
         setMatchResults(null);
       }
+    });
+  };
+
+  const handleNotify = () => {
+    if (!matchResults || !selectedJdForComparison) return;
+
+    startNotifying(async () => {
+        const result = await handleSendNotification({
+            jobDescriptionName: selectedJdForComparison,
+            matches: matchResults,
+        });
+
+        if (result.success && result.email) {
+            setGeneratedEmail(result.email);
+            setIsNotifyDialogOpen(true);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Notification Failed",
+                description: result.error || "Could not generate notification.",
+            });
+        }
     });
   };
 
@@ -146,8 +181,8 @@ export default function ComparePage() {
               </div>
             </div>
 
-            <Button onClick={handleCompare} disabled={isPending || !selectedJdForComparison || selectedProfilesCount === 0}>
-               {isPending ? (
+            <Button onClick={handleCompare} disabled={isComparing || !selectedJdForComparison || selectedProfilesCount === 0}>
+               {isComparing ? (
                 <>
                   <Loader2 className="mr-2 animate-spin" />
                   Comparing...
@@ -164,9 +199,39 @@ export default function ComparePage() {
 
         {matchResults && (
             <Card>
-                <CardHeader>
-                    <CardTitle>Comparison Results</CardTitle>
-                    <CardDescription>Ranked profiles based on their match with the Job Description.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Comparison Results</CardTitle>
+                        <CardDescription>Ranked profiles based on their match with the Job Description.</CardDescription>
+                    </div>
+                    <Dialog open={isNotifyDialogOpen} onOpenChange={setIsNotifyDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button onClick={handleNotify} disabled={isNotifying}>
+                                {isNotifying ? (
+                                    <>
+                                        <Loader2 className="mr-2 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="mr-2" />
+                                        Notify Hiring Manager
+                                    </>
+                                )}
+                            </Button>
+                        </DialogTrigger>
+                        {generatedEmail && (
+                            <DialogContent className="sm:max-w-[625px]">
+                                <DialogHeader>
+                                    <DialogTitle>{generatedEmail.emailSubject}</DialogTitle>
+                                    <DialogDescription>
+                                       This is a preview of the email that will be sent to the hiring manager.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="prose prose-sm dark:prose-invert max-w-none rounded-md border p-4" dangerouslySetInnerHTML={{ __html: generatedEmail.emailBody }} />
+                            </DialogContent>
+                        )}
+                    </Dialog>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {matchResults.map((result, index) => (
@@ -174,7 +239,7 @@ export default function ComparePage() {
                             <CardHeader>
                                 <CardTitle className="flex justify-between items-center">
                                     <span>{result.profileName}</span>
-                                    <Badge variant={result.matchScore > 85 ? 'default' : 'secondary'}>{result.matchScore}% Match</Badge>
+                                    <Badge variant={result.matchScore > 85 ? 'default' : result.matchScore > 70 ? 'secondary' : 'destructive'}>{result.matchScore}% Match</Badge>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
