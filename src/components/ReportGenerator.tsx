@@ -89,7 +89,9 @@ For Consultants, it shows their match percentage across various open JDs.
               setReportType(value);
               setSelectedItem('');
               setGeneratedReport(null);
-            }}>
+            }}
+            value={reportType}
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="jds" id="r1" />
                 <Label htmlFor="r1">By Job Description</Label>
@@ -102,16 +104,18 @@ For Consultants, it shows their match percentage across various open JDs.
           </div>
           <div className="space-y-2">
             <Label htmlFor="select-item">Select {reportType === 'jds' ? 'Job Description' : 'Consultant'}</Label>
-            <Select value={selectedItem} onValueChange={setSelectedItem}>
+            <Select value={selectedItem} onValueChange={setSelectedItem} disabled={options.length === 0}>
               <SelectTrigger id="select-item">
                 <SelectValue placeholder={`Select a ${reportType === 'jds' ? 'JD' : 'consultant'}...`} />
               </SelectTrigger>
               <SelectContent>
-                {options.map(option => (
+                {options.length > 0 ? options.map(option => (
                   <SelectItem key={option.name} value={option.name}>
                     {option.name}
                   </SelectItem>
-                ))}
+                )) : (
+                  <SelectItem value="no-files" disabled>No files uploaded yet.</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
